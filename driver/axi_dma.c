@@ -15,6 +15,7 @@
 #include <linux/slab.h>             // Allocation functions
 #include <linux/stat.h>             // Module parameter permission values
 #include <linux/platform_device.h>  // Platform device definitions
+#include <linux/of.h>               // of_device_id
 
 // Local dependencies
 #include "axidma.h"                 // Internal definitions
@@ -150,6 +151,8 @@ static void __exit axidma_exit(void)
 
 module_init(axidma_init);
 module_exit(axidma_exit);
+
+MODULE_IMPORT_NS(DMA_BUF);  // use DMA_BUF module namespace
 
 MODULE_AUTHOR("Brandon Perez");
 MODULE_AUTHOR("Jared Choi");

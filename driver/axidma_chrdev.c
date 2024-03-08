@@ -22,6 +22,7 @@
 #include <linux/slab.h>         // Kernel allocation functions
 #include <linux/errno.h>        // Linux error codes
 #include <linux/of_device.h>    // Device tree device related functions
+#include <linux/version.h>      // Get linux kernel version
 
 #include <linux/dma-buf.h>      // DMA shared buffers interface
 #include <linux/scatterlist.h>  // Scatter-gather table definitions
@@ -272,7 +273,13 @@ static int axidma_mmap(struct file *file, struct vm_area_struct *vma)
     dma_alloc->device = dev->device;
 
     // Configure the DMA device
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,9,0)
+    // Configure the DMA device
+    of_dma_configure(dev->device, NULL, true);
+#else
+    // Configure the DMA device
     of_dma_configure(dev->device, NULL);
+#endif
 
     // Allocate the requested region a contiguous and uncached for DMA
     dma_alloc->kern_addr = dma_alloc_coherent(&dev->pdev->dev, dma_alloc->size,
@@ -323,6 +330,7 @@ ret:
  * The user specifies the mode, either readonly, or not (read-write). */
 static bool axidma_access_ok(const void __user *arg, size_t size, bool readonly)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
     // Note that VERIFY_WRITE implies VERIFY_WRITE, so read-write is handled
     if (!readonly && !access_ok(VERIFY_WRITE, arg, size)) {
         axidma_err("Argument address %p, size %zu cannot be written to.\n",
@@ -333,6 +341,17 @@ static bool axidma_access_ok(const void __user *arg, size_t size, bool readonly)
                    arg, size);
         return false;
     }
+#else
+    if (!readonly && !access_ok(arg, size)) {
+        axidma_err("Argument address %p, size %zu cannot be written to.\n",
+                   arg, size);
+        return false;
+    } else if (!access_ok(arg, size)) {
+        axidma_err("Argument address %p, size %zu cannot be read from.\n",
+                   arg, size);
+        return false;
+    }
+#endif
 
     return true;
 }
